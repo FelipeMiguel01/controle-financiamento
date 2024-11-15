@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible=IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Financiamento</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+        }
+        .banner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .banner img {
+            max-width: 100%;
+            height: auto;
+            max-height: 1920x1080px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        input, button {
+            margin: 10px 0;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+        input:focus {
+            border-color: #80bdff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .limpar-dados {
+            background-color: #dc3545;
+        }
+        .limpar-dados:hover {
+            background-color: #b52b34;
+        }
+        .tabela-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+        th, td {
+            border: 1px solid #e0e0e0;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+        }
+        th {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .pago {
+            background-color: #d4edda;
+        }
+        .resultado {
+            margin-top: 20px;
+            font-weight: bold;
+            text-align: center;
+            color: #333;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+                margin: 20px;
+            }
+            input, button {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body onload="carregarDados()">
+    <div class="banner">
+        <!-- Substitua a URL abaixo pela URL da sua logo -->
+        <img src="https://cdn.discordapp.com/attachments/1251886545686888572/1306767884126519356/Videos_Novos_2.png?ex=6737ddee&is=67368c6e&hm=e8e2e865cefe6e8e4696e4c1bcf0064b9181601d7824bb381b9b44fcb55ff66a&" alt="Logo">
+    </div>
+    <div class="container">
+        <h2>Controle de Financiamento</h2>
+        <label for="valorTotal">Valor Total do Carro (R$):</label>
+        <input type="number" id="valorTotal" placeholder="Digite o valor total do carro">
+
+        <label for="valorEntrada">Valor da Entrada (R$):</label>
+        <input type="number" id="valorEntrada" placeholder="Digite o valor da entrada">
+
+        <label for="valorParcela">Valor da Parcela Quinzenal (R$):</label>
+        <input type="number" id="valorParcela" placeholder="Digite o valor da parcela">
+
+        <label for="dataInicio">Data de Início do Parcelamento:</label>
+        <input type="date" id="dataInicio">
+
+        <button onclick="calcularFinanciamento()">Calcular Financiamento</button>
+        <button onclick="exportarCSV()">Exportar para CSV</button>
+        <button class="limpar-dados" onclick="limparDados()">Limpar Dados</button>
+
+        <div class="resultado" id="resumoFinanciamento"></div>
+
+        <div class="tabela-container">
+            <table id="tabelaFinanciamento" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Parcela</th>
+                        <th>Data de Início</th>
+                        <th>Data de Término</th>
+                        <th>Valor Pago (R$)</th>
+                        <th>Saldo Devedor (R$)</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyFinanciamento"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function calcularFinanciamento() {
+            const valorTotal = parseFloat(document.getElementById('valorTotal').value);
+            const valorEntrada = parseFloat(document.getElementById('valorEntrada').value);
+            const valorParcela = parseFloat(document.getElementById('valorParcela').value);
+            const dataInicioInput = document.getElementById('dataInicio').value;
+
+            if (isNaN(valorTotal) || isNaN(valorEntrada) || isNaN(valorParcela) || valorTotal <= 0 || valorEntrada < 0 || valorParcela <= 0 || !dataInicioInput) {
+                alert("Preencha todos os campos corretamente com valores positivos e uma data de início.");
+                return;
+            }
+
+            let saldoDevedor = valorTotal - valorEntrada;
+            if (saldoDevedor <= 0) {
+                alert("O valor da entrada cobre ou excede o valor total do carro.");
+                return;
+            }
+
+            let tbody = document.getElementById('tbodyFinanciamento');
+            tbody.innerHTML = ''; // Limpa a tabela para novos cálculos
+            let dataInicio = new Date(dataInicioInput);
+            let dataTermino = new Date(dataInicio);
+            let parcela = 1;
+
+            while (saldoDevedor > 0) {
+                let valorPago = Math.min(valorParcela, saldoDevedor);
+                saldoDevedor -= valorPago;
+
+                // Define a data de término como 15 dias após a data de início
+                dataTermino.setDate(dataInicio.getDate() + 15);
+
+                // Adiciona linha à tabela
+                let row = tbody.insertRow();
+                row.insertCell(0).innerText = parcela;
+
+                let dataInicioInput = document.createElement('input');
+                dataInicioInput.type = 'date';
+                dataInicioInput.value = dataInicio.toISOString().split('T')[0];
+                row.insertCell(1).appendChild(dataInicioInput);
+
+                let dataTerminoInput = document.createElement('input');
+                dataTerminoInput.type = 'date';
+                dataTerminoInput.value = dataTermino.toISOString().split('T')[0];
+                row.insertCell(2).appendChild(dataTerminoInput);
+
+                let valorPagoInput = document.createElement('input');
+                valorPagoInput.type = 'number';
+                valorPagoInput.value = valorPago.toFixed(2);
+                row.insertCell(3).appendChild(valorPagoInput);
+
+                let saldoDevedorInput = document.createElement('input');
+                saldoDevedorInput.type = 'number';
+                saldoDevedorInput.value = saldoDevedor.toFixed(2);
+                saldoDevedorInput.readOnly = true; // Saldo devedor não deve ser editável
+                row.insertCell(4).appendChild(saldoDevedorInput);
+
+                let botaoPago = document.createElement('button');
+                botaoPago.innerText = 'Marcar como Pago';
+                botaoPago.onclick = function() {
+                    row.classList.toggle('pago');
+                    salvarDados();
+                };
+                row.insertCell(5).appendChild(botaoPago);
+
+                if (saldoDevedor <= 0) {
+                    saldoDevedor = 0;
+                }
+
+                // Incrementa para a próxima parcela
+                parcela++;
+                dataInicio = new Date(dataTermino);
+            }
+
+            document.getElementById('resumoFinanciamento').innerText = `Total a pagar: R$ ${(valorTotal - valorEntrada).toFixed(2)}, Número total de parcelas: ${parcela - 1}`;
+            document.getElementById('tabelaFinanciamento').style.display = 'table';
+
+            salvarDados();
+        }
+
+        function salvarDados() {
+            let dados = [];
+            let rows = document.querySelectorAll("#tbodyFinanciamento tr");
+            rows.forEach(row => {
+                let cells = row.querySelectorAll("input");
+                dados.push({
+                    parcela: row.cells[0].innerText,
+                    dataInicio: cells[0].value,
+                    dataTermino: cells[1].value,
+                    valorPago: cells[2].value,
+                    saldoDevedor: cells[3].value,
+                    pago: row.classList.contains('pago')
+                });
+            });
+            const valoresIniciais = {
+                valorTotal: document.getElementById('valorTotal').value,
+                valorEntrada: document.getElementById('valorEntrada').value,
+                valorParcela: document.getElementById('valorParcela').value,
+                dataInicio: document.getElementById('dataInicio').value,
+                dados: dados
+            };
+            localStorage.setItem('dadosFinanciamento', JSON.stringify(valoresIniciais));
+        }
+
+        function carregarDados() {
+            const dados = JSON.parse(localStorage.getItem('dadosFinanciamento'));
+            if (dados) {
+                document.getElementById('valorTotal').value = dados.valorTotal;
+                document.getElementById('valorEntrada').value = dados.valorEntrada;
+                document.getElementById('valorParcela').value = dados.valorParcela;
+                document.getElementById('dataInicio').value = dados.dataInicio;
+
+                let tbody = document.getElementById('tbodyFinanciamento');
+                tbody.innerHTML = '';
+                dados.dados.forEach(item => {
+                    let row = tbody.insertRow();
+                    row.insertCell(0).innerText = item.parcela;
+
+                    let dataInicioInput = document.createElement('input');
+                    dataInicioInput.type = 'date';
+                    dataInicioInput.value = item.dataInicio;
+                    row.insertCell(1).appendChild(dataInicioInput);
+
+                    let dataTerminoInput = document.createElement('input');
+                    dataTerminoInput.type = 'date';
+                    dataTerminoInput.value = item.dataTermino;
+                    row.insertCell(2).appendChild(dataTerminoInput);
+
+                    let valorPagoInput = document.createElement('input');
+                    valorPagoInput.type = 'number';
+                    valorPagoInput.value = item.valorPago;
+                    row.insertCell(3).appendChild(valorPagoInput);
+
+                    let saldoDevedorInput = document.createElement('input');
+                    saldoDevedorInput.type = 'number';
+                    saldoDevedorInput.value = item.saldoDevedor;
+                    saldoDevedorInput.readOnly = true;
+                    row.insertCell(4).appendChild(saldoDevedorInput);
+
+                    let botaoPago = document.createElement('button');
+                    botaoPago.innerText = 'Marcar como Pago';
+                    botaoPago.onclick = function() {
+                        row.classList.toggle('pago');
+                        salvarDados();
+                    };
+                    row.insertCell(5).appendChild(botaoPago);
+
+                    if (item.pago) {
+                        row.classList.add('pago');
+                    }
+                });
+                document.getElementById('tabelaFinanciamento').style.display = 'table';
+            }
+        }
+
+        function limparDados() {
+            if (confirm("Tem certeza que deseja limpar todos os dados?")) {
+                localStorage.removeItem('dadosFinanciamento');
+                location.reload();
+            }
+        }
+
+        function exportarCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            let rows = document.querySelectorAll("table tr");
+
+            rows.forEach(row => {
+                let cols = row.querySelectorAll("td, th, input");
+                let csvRow = [];
+                cols.forEach(col => {
+                    if (col.tagName === 'INPUT') {
+                        csvRow.push(col.value);
+                    } else {
+                        csvRow.push(col.innerText);
+                    }
+                });
+                csvContent += csvRow.join(",") + "\r\n";
+            });
+
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "financiamento.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
+
